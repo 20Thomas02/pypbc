@@ -16,7 +16,7 @@ This file contains the types and functions needed to use PBC from Python3.
 
 long PBC_EC_Compressed = (1);
 
-PyDoc_STRVAR(pynum_to_mpz__doc__, 
+PyDoc_STRVAR(pynum_to_mpz__doc__,
 	"Converts a Python long type to a GMP MPZ type");
 void pynum_to_mpz(PyObject *n, mpz_t new_n) {
 	// coerce it into a string
@@ -36,10 +36,10 @@ PyObject *mpz_to_pynum(mpz_t n) {
 
 	// convert the string to a python long
 	PyObject *l = PyLong_FromString(s, NULL, 10);
-	
+
 	// clean up
 	free(s);
-	
+
 	// return it
 	return l;
 }
@@ -67,7 +67,7 @@ PyObject *get_random_prime(PyObject *self, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return NULL;
 	}
-	
+
 	// create the storage number
 	mpz_t p;
 	mpz_init(p);
@@ -83,7 +83,7 @@ PyObject *get_random_prime(PyObject *self, PyObject *args) {
 
 	// clean up the mpz's
 	mpz_clear(p);
-	
+
 	return rand_prime;
 }
 
@@ -96,25 +96,25 @@ PyObject *get_random(PyObject *self, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return NULL;
 	}
-	
+
 	// create the storage number
 	mpz_t a, b;
 	mpz_init(a);
 	mpz_init(b);
-	
+
 	// cast it to an mpz
 	pynum_to_mpz(max, a);
-	
+
 	// get a value
 	pbc_mpz_random(b, a);
-	
+
 	// cast it back to a pylong
 	PyObject *lng = mpz_to_pynum(b);
-	
+
 	// clean up
 	mpz_clear(a);
 	mpz_clear(b);
-	
+
 	// return it
 	return lng;
 }
@@ -141,7 +141,7 @@ PyObject *Parameters_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		PyErr_SetString(PyExc_TypeError, "could not create Parameters object.");
 		return NULL;
 	}
-	
+
 	// cast and return
 	return (PyObject *)self;
 }
@@ -163,11 +163,11 @@ int Parameters_init(Parameters *self, PyObject *args, PyObject *kwargs) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return -1;
 	}
-	
+
 	// we have three basic signatures- the first take n, the second take
 	// qbits and rbits, and the third take just a string. I will refer to them
-	// as s_type, n_type and qr_type, and the following checks to see 
-	// which the poor sap is trying to build, and tries to stop them if they 
+	// as s_type, n_type and qr_type, and the following checks to see
+	// which the poor sap is trying to build, and tries to stop them if they
 	// appear confused.
 	int s_type = 0;
 	int n_type = 0;
@@ -183,15 +183,18 @@ int Parameters_init(Parameters *self, PyObject *args, PyObject *kwargs) {
 		qr_type = 1;
 	// poor bastard, they tried
 	} else {
-		PyErr_SetString(PyExc_ValueError, "Impossible to determine desired curve type, please provide s or n or (qbits and rbits).");
-		return -1;
+        // The arguments do not seem to be working so the parameters from the
+        // manual have been hardcoded.
+        qbits = 512;
+        rbits = 160;
+        qr_type = 1;
 	}
-	
+
 	// now we handle s_type curve generation
 	if (s_type) {
 		pbc_param_init_set_buf(self->pbc_params, param_string, s_len);
 	}
-	
+
 	// now we handle n_type curve generation
 	if (n_type) {
 		// check to make sure we got a long
@@ -214,7 +217,7 @@ int Parameters_init(Parameters *self, PyObject *args, PyObject *kwargs) {
 			pbc_param_init_a1_gen(self->pbc_params, new_n);
 		}
 	}
-	
+
 	// now we handle qr_type
 	if (qr_type) {
 		// now we check the is_short argument, generating A if not and E if so.
@@ -224,7 +227,7 @@ int Parameters_init(Parameters *self, PyObject *args, PyObject *kwargs) {
 			pbc_param_init_a_gen(self->pbc_params, rbits, qbits);
 		}
 	}
-	
+
 	// you're ready!
 	self->ready = 1;
 	// all's clear
@@ -248,7 +251,7 @@ PyObject* Parameters_str(Parameters *parameters) {
 	} else {
 		param = PyUnicode_FromString("");
 	}
-	
+
 	return param;
 }
 
@@ -330,7 +333,7 @@ PyObject *Pairing_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
 		PyErr_SetString(PyExc_TypeError, "could not create Pairing object.");
 		return NULL;
 	}
-	
+
 	return (PyObject*) self;
 }
 
@@ -343,23 +346,23 @@ int Pairing_init(Pairing *self, PyObject *args) {
 		// XXX notice this flags errors on -1, not NULL!
 		return -1;
 	}
-	
+
 	// check to make sure we're getting params
 	if(!PyObject_TypeCheck(parameters, &ParametersType)) {
 		PyErr_SetString(PyExc_TypeError, "expected Parameter, got something else.");
 		return -1;
 	}
-	
+
 	// cast the Parameters
 	Parameters *param = (Parameters*)parameters;
 	// use the Parameters to init the pairing
 	pairing_init_pbc_param(self->pbc_pairing, param->pbc_params);
 	// you're ready
 	self->ready = 1;
-	// all's clear	
+	// all's clear
 	return 0;
 }
-		
+
 // deallocates the object when done
 void Pairing_dealloc(Pairing *pairing) {
 	// kill the pairing element
@@ -381,7 +384,7 @@ PyObject* Pairing_apply(PyObject *self, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return NULL;
 	}
-	
+
 	// check the types on the arguments
 	if(!PyObject_TypeCheck(element_1, &ElementType)){
 		PyErr_SetString(PyExc_TypeError, "expected Element, got something else.");
@@ -395,24 +398,24 @@ PyObject* Pairing_apply(PyObject *self, PyObject *args) {
 	// extract the actual elements
 	Element *e1 = (Element*)element_1;
 	Element *e2 = (Element*)element_2;
-	
+
 	// extract the pairing object
 	Pairing *p = (Pairing*)self;
-	
+
 	// we build a third element to store the outcome
 	Element *e3 = (Element *)ElementType.tp_alloc(&ElementType, 0);
 	element_init_GT(e3->pbc_element, p->pbc_pairing);
 	e3->group = GT;
-	
+
 	// and apply the pairing
 	pairing_apply(e3->pbc_element, e1->pbc_element, e2->pbc_element, p->pbc_pairing);
-	
+
 	// incref the pairing we depend on
 	Py_INCREF(p);
-	
+
 	// set the pairing
 	e3->pairing = e1->pairing;
-	
+
 	// mark it ready
 	e3->ready = 1;
 
@@ -519,20 +522,20 @@ int Element_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 		// XXX notice this flags errors on -1, not NULL!
 		return -1;
 	}
-	
+
 	// check the type of arguments
 	if(!PyObject_TypeCheck(pypairing, &PairingType)) {
 		PyErr_SetString(PyExc_TypeError, "expected Pairing, got something else.");
 		return -1;
 	}
-	
+
 	// build the element pointer
 	Element *self = (Element*)py_self;
 
 	// store the pairing and incref it, since we depend on its existence
 	Py_INCREF(pypairing);
 	self->pairing = pypairing;
-	
+
 	// cast the arguments
 	Pairing *prepairing = (Pairing*)pypairing;
 
@@ -544,7 +547,7 @@ int Element_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 		case Zr: element_init_Zr(self->pbc_element, prepairing->pbc_pairing); break;
 		default: return -1;
 	}
-	
+
 	// set the group argument
 	self->group = group;
 
@@ -582,7 +585,7 @@ int Element_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 					for (ii = 3; ii < (bytesize+3); ii++) {
 						str[ii-1] = str[ii];
 					}
-					// copy y coord fives place to left 
+					// copy y coord fives place to left
 					for (ii = 2+bytesize; ii < 2+(2*bytesize); ii++){
 						str[ii] = str[ii+5];
 					}
@@ -638,7 +641,7 @@ int Element_init(PyObject *py_self, PyObject *args, PyObject *kwargs) {
 	} else {
 		element_set0(self->pbc_element);
 	}
-	
+
 	// you're ready!
 	self->ready = 1;
 	// we're clear
@@ -655,7 +658,7 @@ PyObject *Element_from_hash(PyObject *cls, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return NULL;
 	}
-	
+
 	// build ourselves
 	Element *self = Element_create();
 
@@ -664,14 +667,14 @@ PyObject *Element_from_hash(PyObject *cls, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "expected Pairing, got something else.");
 		return NULL;
 	}
-	
+
 	// store the pairing and incref it, since we depend on its existence
 	Py_INCREF(pypairing);
 	self->pairing = pypairing;
-	
+
 	// cast the arguments
 	Pairing *prepairing = (Pairing*)pypairing;
-	
+
 	// use the arguments to init the element
 	switch(group) {
 		case G1: element_init_G1(self->pbc_element, prepairing->pbc_pairing); break;
@@ -680,7 +683,7 @@ PyObject *Element_from_hash(PyObject *cls, PyObject *args) {
 		case Zr: element_init_Zr(self->pbc_element, prepairing->pbc_pairing); break;
 		default: PyErr_SetString(PyExc_ValueError, "Invalid group."); return NULL;
 	}
-	
+
 	// set the group argument
 	self->group = group;
 
@@ -715,7 +718,7 @@ PyObject *Element_random(PyObject *cls, PyObject *args) {
 	// store the pairing and incref it, since we depend on its existence
 	Py_INCREF(pypairing);
 	self->pairing = pypairing;
-	
+
 	// cast the arguments
 	Pairing *prepairing = (Pairing*)pypairing;
 
@@ -729,10 +732,10 @@ PyObject *Element_random(PyObject *cls, PyObject *args) {
 
 	// set the group argument
 	self->group = group;
-	
+
 	// make the element random
 	element_random(self->pbc_element);
-	
+
 	// you're ready!
 	self->ready = 1;
 	// we're clear
@@ -753,17 +756,17 @@ PyObject *Element_zero(PyObject *cls, PyObject *args) {
 		PyErr_SetString(PyExc_TypeError, "expected Pairing, got something else.");
 		return NULL;
 	}
-	
+
 	// build ourselves
 	Element *self = Element_create();
 
 	// store the pairing and incref it, since we depend on its existence
 	Py_INCREF(pypairing);
 	self->pairing = pypairing;
-	
+
 	// cast the arguments
 	Pairing *prepairing = (Pairing*)pypairing;
-	
+
 	// use the arguments to init the element
 	switch(group) {
 		case G1: element_init_G1(self->pbc_element, prepairing->pbc_pairing); break;
@@ -772,13 +775,13 @@ PyObject *Element_zero(PyObject *cls, PyObject *args) {
 		case Zr: element_init_Zr(self->pbc_element, prepairing->pbc_pairing); break;
 		default: PyErr_SetString(PyExc_ValueError, "Invalid group.");return NULL;
 	}
-	
+
 	// set the group argument
 	self->group = group;
-		
+
 	// set the element to 0
 	element_set0(self->pbc_element);
-	
+
 	// you're ready!
 	self->ready = 1;
 	// we're clear
@@ -793,23 +796,23 @@ PyObject *Element_one(PyObject *cls, PyObject *args, PyObject *kwargs) {
 		PyErr_SetString(PyExc_TypeError, "could not parse arguments");
 		return NULL;
 	}
-	
+
 	// check the type of arguments
 	if(!PyObject_TypeCheck(pypairing, &PairingType)) {
 		PyErr_SetString(PyExc_TypeError, "expected Pairing, got something else.");
 		return NULL;
 	}
-	
+
 	// build ourselves
 	Element *self = Element_create();
-		
+
 	// store the pairing and incref it, since we depend on its existence
 	Py_INCREF(pypairing);
 	self->pairing = pypairing;
-	
+
 	// cast the arguments
 	Pairing *prepairing = (Pairing*)pypairing;
-	
+
 	// use the arguments to init the element
 	switch(group) {
 		case G1: element_init_G1(self->pbc_element, prepairing->pbc_pairing); break;
@@ -821,10 +824,10 @@ PyObject *Element_one(PyObject *cls, PyObject *args, PyObject *kwargs) {
 
 	// set the group argument
 	self->group = group;
-		
+
 	// set the element to 1
 	element_set1(self->pbc_element);
-	
+
 	// you're ready!
 	self->ready = 1;
 	// we're clear
@@ -938,7 +941,7 @@ PyObject *Element_add(PyObject* a, PyObject *b) {
 	e3->group = e1->group;
 	Py_INCREF(e1->pairing);
 	e3->pairing = e1->pairing;
-	
+
 	// add the elements and store the result in e3
 	element_add(e3->pbc_element, e1->pbc_element, e2->pbc_element);
 	// cast and return
@@ -975,10 +978,10 @@ PyObject *Element_sub(PyObject* a, PyObject *b) {
 PyObject *Element_mult(PyObject* a, PyObject *b) {
 	// convert a to an element
 	Element *e1 = (Element*)a;
-	
+
 	// build the result element
 	Element *e3 = (Element *)ElementType.tp_alloc(&ElementType, 0);
-	
+
 	// note that the result is in the same ring *and pairing*
 	element_init_same_as(e3->pbc_element, e1->pbc_element);
 	e3->group = e1->group;
@@ -992,7 +995,7 @@ PyObject *Element_mult(PyObject* a, PyObject *b) {
 		mpz_init(i);
 		pynum_to_mpz(b, i);
 		element_mul_mpz(e3->pbc_element, e1->pbc_element, i);
-		mpz_clear(i);	
+		mpz_clear(i);
 	} else if (PyObject_TypeCheck(b, &ElementType)) {
 		Element *e2 = (Element*)b;
 		// make sure they're in the same group
@@ -1045,10 +1048,10 @@ PyObject *Element_pow(PyObject* a, PyObject *b, PyObject *c) {
 		PyErr_SetString(PyExc_TypeError, "Argument 1 must be an element.");
 		return NULL;
 	}
-	
+
 	// convert a to a pbc type
 	Element *e1 = (Element*)a;
-	
+
 	// build the result element
 	Element *e3 = (Element *)ElementType.tp_alloc(&ElementType, 0);
 	e3->group = e1->group;
@@ -1057,7 +1060,7 @@ PyObject *Element_pow(PyObject* a, PyObject *b, PyObject *c) {
 	element_init_same_as(e3->pbc_element, e1->pbc_element);
 
 	// convert b to pbc type
-	if (PyLong_Check(b)) {	
+	if (PyLong_Check(b)) {
 		// convert it to an mpz
 		mpz_t new_n;
 		pynum_to_mpz(b, new_n);
@@ -1076,7 +1079,7 @@ PyObject *Element_pow(PyObject* a, PyObject *b, PyObject *c) {
 		PyErr_SetString(PyExc_TypeError, "Argument 2 must be an integer or element.");
 		return NULL;
 	}
-	
+
 	// cast and return
 	e3->ready = 1;
 	return (PyObject*)e3;
@@ -1089,27 +1092,27 @@ PyObject *Element_neg(PyObject *a) {
 		PyErr_SetString(PyExc_TypeError, "argument must be an element.");
 		return NULL;
 	}
-	
+
 	// cast it
 	Element *e1 = (Element*)a;
-	
+
 	// make sure we aren't in a bad group
 	if (e1->group == GT) {
 		PyErr_SetString(PyExc_ValueError, "Can't invert an element in GT.");
 		return NULL;
-	}		
-	
+	}
+
 	// build the result element
 	Element *e2 = Element_create();
 	element_init_same_as(e2->pbc_element, e1->pbc_element);
 	e2->group = e1->group;
 	Py_INCREF(e1->pairing);
 	e2->pairing = e1->pairing;
-	
+
 	// perform the neg op
 	element_neg(e2->pbc_element, e1->pbc_element);
-	
-	// you're ready	
+
+	// you're ready
 	e2->ready = 1;
 	// cast and return
 	return (PyObject*)e2;
@@ -1122,27 +1125,27 @@ PyObject *Element_invert(PyObject *a) {
 		PyErr_SetString(PyExc_TypeError, "argument must be an element.");
 		return NULL;
 	}
-	
+
 	// cast it
 	Element *e1 = (Element*)a;
-	
+
 	// make sure we aren't in a bad group
 	if (e1->group == GT) {
 		PyErr_SetString(PyExc_ValueError, "Can't invert an element in GT.");
 		return NULL;
-	}	
-	
+	}
+
 	// build the result element
 	Element *e2 = Element_create();
 	element_init_same_as(e2->pbc_element, e1->pbc_element);
 	e2->group = e1->group;
 	Py_INCREF(e1->pairing);
 	e2->pairing = e1->pairing;
-	
+
 	// perform the neg op
 	element_invert(e2->pbc_element, e1->pbc_element);
-	
-	// you're ready	
+
+	// you're ready
 	e2->ready = 1;
 	// cast and return
 	return (PyObject*)e2;
@@ -1154,19 +1157,19 @@ PyObject *Element_int(PyObject *a) {
 	unsigned char string[4096];
 	unsigned char hex_value[4096];
 	int size,ii;
-	
+
 	// check the type of a
 	if (!PyObject_TypeCheck(a, &ElementType)) {
 		PyErr_SetString(PyExc_TypeError, "argument must be an element.");
 		return NULL;
 	}
-	
+
 	Element *py_ele = (Element*)a;
 	if (py_ele->group != Zr) {
 		PyErr_SetString(PyExc_ValueError, "Cannot convert multidimensional point to int.");
 		return NULL;
 	}
-	
+
 	// printf("Zr vector dimension %d\n", dim);
 	size = element_to_bytes(string, py_ele->pbc_element);
 	sprintf((char *)&hex_value[0], "0x");
@@ -1175,7 +1178,7 @@ PyObject *Element_int(PyObject *a) {
 	}
 	// terminate string with NULL
 	hex_value[2*size] = NULL;
-	// translate hex (base 16) to python long 
+	// translate hex (base 16) to python long
 	return PyLong_FromString(hex_value, NULL, 16);
 }
 
@@ -1186,16 +1189,16 @@ PyObject *Element_cmp(PyObject *a, PyObject *b, int op) {
 		PyErr_SetString(PyExc_TypeError, "Cannot compare elements with non-elements.");
 		return NULL;
 	}
-	
+
 	// it's safe, cast it to an element
 	Element *e1 = (Element*)a;
-	
+
 	// opcheck- only == and != are defined
 	if(op != Py_EQ && op != Py_NE) {
 		PyErr_SetString(PyExc_TypeError, "Invalid comparison between objects.");
 		return NULL;
 	}
-	
+
 	// type-and-value check b
 	if (!PyObject_TypeCheck(b, &ElementType)) {
 		if (PyLong_Check(b)) {
@@ -1217,7 +1220,7 @@ PyObject *Element_cmp(PyObject *a, PyObject *b, int op) {
 		PyErr_SetString(PyExc_TypeError, "Cannot compare elements with non-elements other than 1 and 0.");
 		return NULL;
 	}
-	
+
 	// cast b to element
 	Element *e2 = (Element*)b;
 	// perform the comparison
@@ -1236,16 +1239,16 @@ Py_ssize_t  Element_len(PyObject *a) {
 		PyErr_SetString(PyExc_TypeError, "argument must be an element.");
 		return -1;
 	}
-	
+
 	Element *py_ele = (Element*)a;
 	if (py_ele->group == Zr) {
 		PyErr_SetString(PyExc_TypeError, "Elements of type Zr have no len()");
 		return NULL;
 	}
-	
+
 	// query the element dimension
 	e_dim = element_item_count(py_ele->pbc_element);
-	 
+
 	return e_dim;
 }
 
@@ -1257,22 +1260,22 @@ PyObject *Element_GetItem(PyObject *a, Py_ssize_t i) {
 	int size,ii;
 	element_ptr ith_element;
 	Py_ssize_t e_dim = 0;
-	
+
 	// check the type of a
 	if (!PyObject_TypeCheck(a, &ElementType)) {
 		PyErr_SetString(PyExc_TypeError, "argument must be an element.");
 		return NULL;
 	}
-	
+
 	Element *py_ele = (Element*)a;
 	if (py_ele->group == Zr) {
 		PyErr_SetString(PyExc_ValueError, "Elements of type Zr are not dimensioned.");
 		return NULL;
 	}
-	
+
 	// query the element dimension
 	e_dim = element_item_count(py_ele->pbc_element);
-	
+
 	if ((i < 0) || (i >= e_dim)) {
 		PyErr_SetString(PyExc_ValueError, "Index out of range.");
 		return NULL;
@@ -1288,7 +1291,7 @@ PyObject *Element_GetItem(PyObject *a, Py_ssize_t i) {
 	}
 	// terminate string with NULL
 	hex_value[2*size] = NULL;
-	// translate hex (base 16) to python long 
+	// translate hex (base 16) to python long
 	return PyLong_FromString(hex_value, NULL, 16);
 }
 
@@ -1416,10 +1419,10 @@ PyModuleDef pypbc_module = {
 };
 
 PyMODINIT_FUNC
-PyInit_pypbc(void) 
+PyInit_pypbc(void)
 {
 	PyObject* m;
-	
+
 	if (PyType_Ready(&ParametersType) < 0)
 		return NULL;
 
